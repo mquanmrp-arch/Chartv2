@@ -100,7 +100,7 @@ with col2:
                 ax.set_title('Distribución de Probabilidades')
                 st.pyplot(fig)
                 
-                else:  # Multi-clase
+            else:  # Multi-clase
                 # Lista de nombres de patrones (debe coincidir con el orden de entrenamiento del modelo)
                 patrones = [
                     "Bandera Alcista", "Bandera Bajista",
@@ -133,8 +133,7 @@ with col2:
 
                 num_clases = len(predictions[0])
 
-                # Solo usamos nombres genéricos si es estrictamente necesario,
-                # pero preferimos mantener los nombres reales si el modelo tiene 15 clases
+                # Usar nombres reales si el número de clases coincide; si no, usar genéricos
                 if num_clases != len(patrones):
                     st.warning(f"⚠️ El modelo tiene {num_clases} clases, pero se esperaban {len(patrones)}. Usando etiquetas genéricas.")
                     patrones_display = [f"Patrón {i+1}" for i in range(num_clases)]
@@ -150,13 +149,14 @@ with col2:
                 st.markdown(f"**Confianza:** {confianza_max:.1%}")
                 st.progress(float(confianza_max))
 
-                # Intentar mostrar imagen solo si el nombre coincide con el diccionario original (no el genérico)
+                # Mostrar imagen del patrón predicho (solo si coincide con el diccionario original)
                 patron_nombre_original = patrones[idx_predicho] if num_clases == len(patrones) else None
                 if patron_nombre_original and patron_nombre_original in patron_imagenes:
-                    try:
-                        st.image(patron_imagenes[patron_nombre_original], caption=f"Patrón: {patron_predicho}", width=250)
-                    except Exception as img_error:
-                        st.info(f"Imagen no disponible para {patron_predicho}")
+                    imagen_path = patron_imagenes[patron_nombre_original]
+                    if os.path.exists(imagen_path):
+                        st.image(imagen_path, caption=f"Patrón: {patron_predicho}", width=250)
+                    else:
+                        st.info(f"Imagen no encontrada: {imagen_path}")
                 else:
                     st.info("Imagen del patrón no disponible.")
 
@@ -166,7 +166,7 @@ with col2:
                         nombre = patrones_display[idx]
                         st.metric(nombre, f"{predictions[0][idx]:.2%}")
                 
-                # Gráfico corregido: usa patrones_display para mostrar los nombres correctos
+                # Gráfico de barras horizontales
                 y_pos = np.arange(num_clases)
                 colors = ['green' if i == idx_predicho else 'skyblue' for i in range(num_clases)]
                 fig, ax = plt.subplots(figsize=(10, min(8, num_clases * 0.6)))
