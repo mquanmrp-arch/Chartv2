@@ -108,7 +108,7 @@ with col2:
                     "Hombro-Cabeza-Hombro", "Doble Techo", "Doble Piso",
                     "Rectángulo Alcista", "Rectángulo Bajista",
                     "Triángulo Alcista", "Triángulo Bajista",
-                    "Triángulo Simétrico Alc", "Triángulo Simétrico Baj"
+                    "Triángulo Simetrico Alc", "Triángulo Simetrico Baj"
                 ]
 
                 patron_imagenes = {
@@ -132,103 +132,33 @@ with col2:
                 num_clases = len(predictions[0])
                 if len(patrones) != num_clases:
                     patrones = [f"Patrón {i+1}" for i in range(num_clases)]
-                
-                # Crear lista de nombres de archivos para el gráfico
-                nombres_archivos = []
-                for patron in patrones:
-                    if patron in patron_imagenes:
-                        # Extraer solo el nombre del archivo (sin "Patron/")
-                        nombre_archivo = patron_imagenes[patron].split('/')[-1]
-                        nombres_archivos.append(nombre_archivo)
-                    else:
-                        nombres_archivos.append(patron)
 
                 indices_ordenados = np.argsort(predictions[0])[::-1]
                 patron_predicho = patrones[indices_ordenados[0]]
                 confianza_max = predictions[0][indices_ordenados[0]]
-                archivo_patron_predicho = nombres_archivos[indices_ordenados[0]]
                 
-                st.markdown(f"### 🎯 Patrón Predicho: {archivo_patron_predicho}")
+                st.markdown(f"### 🎯 {patron_predicho}")
                 st.markdown(f"**Confianza:** {confianza_max:.1%}")
                 st.progress(float(confianza_max))
+
+                if patron_predicho in patron_imagenes:
+                    st.image(patron_imagenes[patron_predicho], caption=f"Patrón: {patron_predicho}", width=250)
                 
-                st.markdown("---")
+                with st.expander("Ver Top 3 Patrones"):
+                    for i in range(min(3, len(indices_ordenados))):
+                        idx = indices_ordenados[i]
+                        st.metric(patrones[idx], f"{predictions[0][idx]:.2%}")
                 
-                # TRES GRÁFICAS PROPORCIONALES
-                col_grafica1, col_grafica2, col_grafica3 = st.columns(3)
-                
-                with col_grafica1:
-                    st.markdown("#### 📊 Activo Analizado")
-                    st.image(img, caption="Gráfico del Activo", use_container_width=True)
-                
-                with col_grafica2:
-                    st.markdown("#### 📈 Ranking de Probabilidades")
-                    # Gráfico de barras con nombres de archivos
-                    y_pos = np.arange(num_clases)
-                    colors = ['green' if i == indices_ordenados[0] else 'skyblue' for i in range(num_clases)]
-                    fig, ax = plt.subplots(figsize=(6, min(8, num_clases * 0.5)))
-                    ax.barh(y_pos, predictions[0], color=colors)
-                    ax.set_yticks(y_pos)
-                    ax.set_yticklabels(nombres_archivos, fontsize=8)
-                    ax.set_xlabel('Probabilidad', fontsize=9)
-                    ax.set_title('Ranking de Patrones', fontsize=10)
-                    ax.set_xlim(0, 1)
-                    plt.tight_layout()
-                    st.pyplot(fig)
-                
-                with col_grafica3:
-                    st.markdown("#### 🎯 Patrón Detectado")
-                    # Mostrar imagen del patrón predicho
-                    if patron_predicho in patron_imagenes:
-                        if os.path.exists(patron_imagenes[patron_predicho]):
-                            patron_img = Image.open(patron_imagenes[patron_predicho])
-                            st.image(patron_img, caption=f"{archivo_patron_predicho}", use_container_width=True)
-                        else:
-                            st.warning(f"⚠️ Imagen no encontrada")
-                            st.info(f"Ruta: {patron_imagenes[patron_predicho]}")
-                    else:
-                        st.info("Sin imagen de referencia")
-                
-                # Ranking mejorado con imágenes (colapsable)
-                st.markdown("---")
-                with st.expander("🏆 Ver Ranking Completo de Patrones"):
-                    st.markdown("### Top Patrones Detectados")
-                    
-                    for i, idx in enumerate(indices_ordenados):
-                        patron_nombre = patrones[idx]
-                        probabilidad = predictions[0][idx]
-                        
-                        col_rank1, col_rank2, col_rank3 = st.columns([0.5, 2, 1])
-                        
-                        with col_rank1:
-                            # Medalla para top 3
-                            if i == 0:
-                                st.markdown("### 🥇")
-                            elif i == 1:
-                                st.markdown("### 🥈")
-                            elif i == 2:
-                                st.markdown("### 🥉")
-                            else:
-                                st.markdown(f"### {i+1}°")
-                        
-                        with col_rank2:
-                            st.markdown(f"**{patron_nombre}**")
-                            st.progress(float(probabilidad))
-                            st.caption(f"Probabilidad: {probabilidad:.2%}")
-                            
-                            # Mostrar ruta del archivo
-                            if patron_nombre in patron_imagenes:
-                                st.caption(f"📁 `{patron_imagenes[patron_nombre]}`")
-                        
-                        with col_rank3:
-                            # Mostrar miniatura de la imagen del patrón
-                            if patron_nombre in patron_imagenes:
-                                if os.path.exists(patron_imagenes[patron_nombre]):
-                                    st.image(patron_imagenes[patron_nombre], width=100)
-                                else:
-                                    st.caption("🖼️ N/A")
-                        
-                        st.markdown("---")
+                y_pos = np.arange(num_clases)
+                colors = ['green' if i == indices_ordenados[0] else 'skyblue' for i in range(num_clases)]
+                fig, ax = plt.subplots(figsize=(10, min(8, num_clases * 0.6)))
+                ax.barh(y_pos, predictions[0], color=colors)
+                ax.set_yticks(y_pos)
+                ax.set_yticklabels(patrones)
+                ax.set_xlabel('Probabilidad')
+                ax.set_title('Probabilidades por Patrón')
+                ax.set_xlim(0, 1)
+                st.pyplot(fig)
             
             st.success("✅ Análisis completado exitosamente")
             
@@ -266,10 +196,6 @@ with st.expander("📚 ¿Cómo usar esta aplicación?"):
     ### 📊 Tipos de análisis:
     - **Binario:** Determina si la tendencia es alcista o bajista
     - **Multi-clase:** Identifica patrones chartistas específicos
-    
-    ### 🖼️ Imágenes de patrones:
-    - Asegúrate de tener la carpeta `Patron/` con las imágenes correspondientes
-    - Las imágenes deben seguir la nomenclatura indicada en el código
     """)
 
 st.markdown("---")
