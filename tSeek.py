@@ -100,7 +100,8 @@ with col2:
                 ax.set_title('Distribución de Probabilidades')
                 st.pyplot(fig)
                 
-            else:  # Multi-clase
+                else:  # Multi-clase
+                # Lista de nombres de patrones (debe coincidir con el orden de entrenamiento del modelo)
                 patrones = [
                     "Bandera Alcista", "Bandera Bajista",
                     "Canal Alcista", "Canal Bajista",
@@ -108,9 +109,10 @@ with col2:
                     "Hombro-Cabeza-Hombro", "Doble Techo", "Doble Piso",
                     "Rectángulo Alcista", "Rectángulo Bajista",
                     "Triángulo Alcista", "Triángulo Bajista",
-                    "Triángulo Simetrico Alc", "Triángulo Simetrico Baj"
+                    "Triángulo Simétrico Alc", "Triángulo Simétrico Baj"
                 ]
 
+                # Diccionario de rutas de imágenes (¡corregido para coincidir con los nombres exactos!)
                 patron_imagenes = {
                     "Bandera Alcista": "Patron/BAlc.png",
                     "Bandera Bajista": "Patron/BBaj.png",
@@ -130,31 +132,47 @@ with col2:
                 }   
 
                 num_clases = len(predictions[0])
-                if len(patrones) != num_clases:
-                    patrones = [f"Patrón {i+1}" for i in range(num_clases)]
+
+                # Solo usamos nombres genéricos si es estrictamente necesario,
+                # pero preferimos mantener los nombres reales si el modelo tiene 15 clases
+                if num_clases != len(patrones):
+                    st.warning(f"⚠️ El modelo tiene {num_clases} clases, pero se esperaban {len(patrones)}. Usando etiquetas genéricas.")
+                    patrones_display = [f"Patrón {i+1}" for i in range(num_clases)]
+                else:
+                    patrones_display = patrones
 
                 indices_ordenados = np.argsort(predictions[0])[::-1]
-                patron_predicho = patrones[indices_ordenados[0]]
-                confianza_max = predictions[0][indices_ordenados[0]]
+                idx_predicho = indices_ordenados[0]
+                patron_predicho = patrones_display[idx_predicho]
+                confianza_max = predictions[0][idx_predicho]
                 
                 st.markdown(f"### 🎯 {patron_predicho}")
                 st.markdown(f"**Confianza:** {confianza_max:.1%}")
                 st.progress(float(confianza_max))
 
-                if patron_predicho in patron_imagenes:
-                    st.image(patron_imagenes[patron_predicho], caption=f"Patrón: {patron_predicho}", width=250)
-                
+                # Intentar mostrar imagen solo si el nombre coincide con el diccionario original (no el genérico)
+                patron_nombre_original = patrones[idx_predicho] if num_clases == len(patrones) else None
+                if patron_nombre_original and patron_nombre_original in patron_imagenes:
+                    try:
+                        st.image(patron_imagenes[patron_nombre_original], caption=f"Patrón: {patron_predicho}", width=250)
+                    except Exception as img_error:
+                        st.info(f"Imagen no disponible para {patron_predicho}")
+                else:
+                    st.info("Imagen del patrón no disponible.")
+
                 with st.expander("Ver Top 3 Patrones"):
                     for i in range(min(3, len(indices_ordenados))):
                         idx = indices_ordenados[i]
-                        st.metric(patrones[idx], f"{predictions[0][idx]:.2%}")
+                        nombre = patrones_display[idx]
+                        st.metric(nombre, f"{predictions[0][idx]:.2%}")
                 
+                # Gráfico corregido: usa patrones_display para mostrar los nombres correctos
                 y_pos = np.arange(num_clases)
-                colors = ['green' if i == indices_ordenados[0] else 'skyblue' for i in range(num_clases)]
+                colors = ['green' if i == idx_predicho else 'skyblue' for i in range(num_clases)]
                 fig, ax = plt.subplots(figsize=(10, min(8, num_clases * 0.6)))
                 ax.barh(y_pos, predictions[0], color=colors)
                 ax.set_yticks(y_pos)
-                ax.set_yticklabels(patrones)
+                ax.set_yticklabels(patrones_display)
                 ax.set_xlabel('Probabilidad')
                 ax.set_title('Probabilidades por Patrón')
                 ax.set_xlim(0, 1)
